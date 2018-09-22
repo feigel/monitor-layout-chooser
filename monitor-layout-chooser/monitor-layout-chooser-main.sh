@@ -1,5 +1,9 @@
 #!/bin/bash
 
+CUSTOMDIR="custom"
+PROGRAMDIR="monitor-layout-chooser"
+
+main () {
 while :; do
 cd /userhome/.config/autorandr
 layout=(*)
@@ -23,17 +27,27 @@ FALSE "Delete layout" "DELE" )
 echo $mylayout
 
 case $mylayout in
-LOAD)	source /custom/monitor-layout-chooser/load-monitor-layout.sh
+LOAD)	load-monitor-layout
 	;;
-CREA)	source /custom/monitor-layout-chooser/create-monitor-layout.sh
+CREA)	source /${CUSTOMDIR}/${PROGRAMDIR}/create-monitor-layout.sh
 	;;
-SAVE)	source /custom/monitor-layout-chooser/save-monitor-layout.sh
+SAVE)	source /${CUSTOMDIR}/${PROGRAMDIR}/save-monitor-layout.sh
 	;;
-SHOW)	source /custom/monitor-layout-chooser/show-monitor-layout.sh
+SHOW)	source /${CUSTOMDIR}/${PROGRAMDIR}/show-monitor-layout.sh
 	;;
-DELE)	source /custom/monitor-layout-chooser/delete-monitor-layout.sh
+DELE)	source /${CUSTOMDIR}/${PROGRAMDIR}/delete-monitor-layout.sh
 	;;
 *) exit 0
    ;;
 esac
 done
+}
+
+load-monitor-layout () {
+cd /userhome/.config/autorandr
+layout=(*/)
+mylayout=$(zenity --list --height $(( 70 * ${#layout[@]} )) --title="Choose layout" --column="Layout"  "${layout[@]%%/}")
+/${CUSTOMDIR}/${PROGRAMDIR}/autorandr.py --force --load "${mylayout}" --skip-options primary
+}
+main
+
