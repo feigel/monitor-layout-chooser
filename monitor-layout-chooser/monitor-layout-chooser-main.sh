@@ -1,4 +1,5 @@
 #!/bin/bash
+
 while :; do
 cd /userhome/.config/autorandr
 layout=(*)
