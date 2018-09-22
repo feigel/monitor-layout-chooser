@@ -1,5 +1,6 @@
 # monitor-layout-chooser
-Intended to allow multiple monitor configurations to be saved and chosen at will  
+Intended to allow multiple monitor configurations to be saved and chosen at will on IGEL OS
+## firmware 10.04.280
 * Daemon mode
   * As long as only one profile for each monitor configuration is saved, will automatically switch between layouts
     * Layout:1
