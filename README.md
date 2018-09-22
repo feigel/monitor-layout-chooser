@@ -1,6 +1,9 @@
 # monitor-layout-chooser
 Intended to allow multiple monitor configurations to be saved and chosen at will on IGEL OS
 ## firmware 10.04.280
+### Files:
+* Monitor_layout_chooser_profile.zip -- IGEL UMS profile.  Import and go
+
 Thanks to phillipberndt/autorandr -- this is awesome!  
 * Daemon mode
   * As long as only one profile for each monitor configuration is saved, will automatically switch between layouts
