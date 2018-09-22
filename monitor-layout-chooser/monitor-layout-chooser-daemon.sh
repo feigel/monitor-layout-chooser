@@ -1,3 +1,5 @@
+#!/bin/bash
+
 while :; do 
 
 if [ $(pidof xfce4-display-settings) ]; then
