@@ -29,13 +29,13 @@ echo $mylayout
 case $mylayout in
 LOAD)	load-monitor-layout
 	;;
-CREA)	source /${CUSTOMDIR}/${PROGRAMDIR}/create-monitor-layout.sh
+CREA)	create-monitor-layout
 	;;
-SAVE)	source /${CUSTOMDIR}/${PROGRAMDIR}/save-monitor-layout.sh
+SAVE)	save-monitor-layout
 	;;
-SHOW)	source /${CUSTOMDIR}/${PROGRAMDIR}/show-monitor-layout.sh
+SHOW)	show-monitor-layout
 	;;
-DELE)	source /${CUSTOMDIR}/${PROGRAMDIR}/delete-monitor-layout.sh
+DELE)	delete-monitor-layout
 	;;
 *) exit 0
    ;;
@@ -49,5 +49,36 @@ layout=(*/)
 mylayout=$(zenity --list --height $(( 70 * ${#layout[@]} )) --title="Choose layout" --column="Layout"  "${layout[@]%%/}")
 /${CUSTOMDIR}/${PROGRAMDIR}/autorandr.py --force --load "${mylayout}" --skip-options primary
 }
+
+create-monitor-layout () {
+touch /tmp/SAVE_MONITOR_LAYOUT_PENDING
+cd /userhome/.config/autorandr
+layout=(*)
+xfce4-display-settings
+mylayout=$(zenity --entry --text="Save Monitor Layout" --entry-text="Layout Name")
+/${CUSTOMDIR}/${PROGRAMDIR}/autorandr.py --save "${mylayout}"
+rm /tmp/SAVE_MONITOR_LAYOUT_PENDING
+}
+
+save-monitor-layout () {
+touch /tmp/SAVE_MONITOR_LAYOUT_PENDING
+mylayout=$(zenity --entry --text="Save Monitor Layout" --entry-text="Layout Name")
+/${CUSTOMDIR}/${PROGRAMDIR}/autorandr.py --save "${mylayout}"
+rm /tmp/SAVE_MONITOR_LAYOUT_PENDING
+}
+
+show-monitor-layout () {
+cd /userhome/.config/autorandr
+layout=(*/)
+printf '%s\n' "${layout[@]%%/}" | zenity --text-info --width 350 --height $(( 70 * ${#layout[@]} )) --title="Available Layouts"
+}
+
+delete-monitor-layout () {
+cd /userhome/.config/autorandr
+layout=(*/)
+mylayout=$(zenity --list --height $(( 70 * ${#layout[@]} )) --title="Delete layout" --column="Layout"  "${layout[@]%%/}")
+/${CUSTOMDIR}/${PROGRAMDIR}/autorandr.py --remove "${mylayout}"
+}
+
 main
 
