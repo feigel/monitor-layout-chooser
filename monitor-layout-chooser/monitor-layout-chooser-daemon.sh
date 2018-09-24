@@ -22,4 +22,7 @@ if [ -f /tmp/KILLYOURSELF ]; then
 	rm /tmp/KILLYOURSELF
 	exit 1;
 fi
+if [ $MONITORLAYOUTDAEMON -eq 0 ]; then
+	exit 1;
+fi
 done
