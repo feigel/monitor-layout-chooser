@@ -1,7 +1,7 @@
 [INFO]
 [PART]
 file="monitor-layout-chooser.tar.bz2"
-version="0.10"
-size="20M"
+version="0.15"
+size="30M"
 name="monitor-layout-chooser"
 minfw="10.04.100"
