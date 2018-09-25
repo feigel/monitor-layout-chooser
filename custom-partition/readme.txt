@@ -17,6 +17,8 @@ Steps to deploy the Custom Partition
 5. 	Edit the profile and turn on the automatic daemon if so required under System->Firmware Customization->Environment Variables->Predefined
 	a. Variable: MONITORLAYOUTDAEMON
 	b. Value: 1 for ENABLED -- 0 for DISABLED
-5.	Assign the profile to Thin Client(s).
-6.	Restart the TC after deployment of the CP.
-
+6. 	Edit the profile and turn on the debug if so required under System->Firmware Customization->Environment Variables->Predefined (puts data in dmesg)
+	a. Variable: MONITORLAYOUTDEBUG
+	b. Value: 1 for ENABLED -- 0 for DISABLED
+7.	Assign the profile to Thin Client(s).
+8.	Restart the TC after deployment of the CP. (not necessary, but...)
