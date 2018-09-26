@@ -13,8 +13,7 @@ fi
 
 if [ ! -f /tmp/SAVE_MONITOR_LAYOUT_PENDING ]; then
 TOPPROFILE="`/custom/monitor-layout-chooser/autorandr.py --detected | (mapfile -t layouts; echo ${layouts[0]})`"
-/custom/monitor-layout-chooser/autorandr.py --force --load "${TOPPROFILE}"
-/custom/monitor-layout-chooser/autorandr.py --force --change
+/custom/monitor-layout-chooser/autorandr.py --change
 
 	if [ $MONITORLAYOUTDEBUG -eq 1 ]; then
 		echo -e "\n\n==========" | logger -t monitor-layout-chooser
