@@ -48,7 +48,7 @@ if sys.version_info.major == 2:
 else:
     import configparser
 
-__version__ = "1.6"
+__version__ = "1.7"
 
 try:
     input = raw_input
@@ -155,7 +155,8 @@ class XrandrOutput(object):
             (?P<rotate>(?:normal|left|right|inverted))\s+                               # Rotation
             (?:(?P<reflect>X\ and\ Y|X|Y)\ axis)?                                       # Reflection
         )?                                                                              # .. but only if the screen is in use.
-        (?:[\ \t]*\([^\)]+\))(?:\s*[0-9]+mm\sx\s[0-9]+mm)?
+        (?:[\ \t]*\([^\)]+\))\s*
+        (?:(?P<physical_width>[0-9]+)mm\sx\s(?P<physical_height>[0-9]+)mm)?             # Physical size
         (?:[\ \t]*panning\ (?P<panning>[0-9]+x[0-9]+\+[0-9]+\+[0-9]+))?                 # Panning information
         (?:[\ \t]*tracking\ (?P<tracking>[0-9]+x[0-9]+\+[0-9]+\+[0-9]+))?               # Tracking information
         (?:[\ \t]*border\ (?P<border>(?:[0-9]+/){3}[0-9]+))?                            # Border information
@@ -191,8 +192,11 @@ class XrandrOutput(object):
         "gamma": "1.0:1.0:1.0",
     }
 
+    GLOBAL_OPTIONS = ("fb", "dpi")
+
     XRANDR_DEFAULTS = dict(list(XRANDR_13_DEFAULTS.items()) + list(XRANDR_12_DEFAULTS.items()))
 
+    METRE_TO_INCH = 39.3700787402
     EDID_UNAVAILABLE = "--CONNECTED-BUT-EDID-UNAVAILABLE-"
 
     def __repr__(self):
@@ -213,7 +217,7 @@ class XrandrOutput(object):
         if xrandr_version() >= Version("1.2"):
             options.update(self.XRANDR_12_DEFAULTS)
         options.update(self.options)
-        return {a: b for a, b in options.items() if a not in self.ignored_options}
+        return {a: b for a, b in options.items() if a not in self.ignored_options and a not in self.GLOBAL_OPTIONS}
 
     @property
     def filtered_options(self):
@@ -364,6 +368,11 @@ class XrandrOutput(object):
                 options["gamma"] = gamma
             if match["rate"]:
                 options["rate"] = match["rate"]
+            if match["physical_width"]:
+                width_inches = int(match["physical_width"]) * 1e-3 * XrandrOutput.METRE_TO_INCH
+                height_inches = int(match["physical_height"]) * 1e-3 * XrandrOutput.METRE_TO_INCH
+                if width_inches and height_inches:
+                    print("\033[1mDebug\033[0m: Output %s reports %3.2f x %3.2f DPI" % (match["output"], int(match["width"]) / width_inches, int(match["height"]) / height_inches))
 
         return XrandrOutput(match["output"], edid, options), modes
 
@@ -478,7 +487,18 @@ def parse_xrandr_output():
     if not xrandr_output:
         raise AutorandrException("Failed to run xrandr")
 
-    # We are not interested in screens
+    # Extract fb size and dpi
+    screen_size = re.search("(?m)^Screen 0:.+current (?P<width>[0-9]+) x (?P<height>[0-9]+)", xrandr_output)
+    res_phys_pairs = re.findall("(?m)\S+ connected (?:primary)? (?P<width>[0-9]+)x(?P<height>[0-9]+)\+.+ (?P<width_mm>[0-9]+)mm x (?P<height_mm>[0-9]+)mm", xrandr_output)
+    dpis = []
+    for pair in res_phys_pairs:
+        MM_PER_INCH = 25.4
+        dpis.append(int(pair[0]) * MM_PER_INCH / int(pair[2]))
+        dpis.append(int(pair[1]) * MM_PER_INCH / int(pair[3]))
+    dpi = "%d" % (sum(dpis) // len(dpis),) if dpis else None
+    fb = "%sx%s" % (screen_size.group("width"), screen_size.group("height")) if screen_size else None
+
+    # We aren't interested in screens anymore
     xrandr_output = re.sub("(?m)^Screen [0-9].+", "", xrandr_output).strip()
 
     # Split at output boundaries and instanciate an XrandrOutput per output
@@ -493,6 +513,17 @@ def parse_xrandr_output():
         outputs[output_name] = output
         if output_modes:
             modes[output_name] = output_modes
+
+    # Piggy-back dpi and fb as option of first non-off screen
+    for output_name in outputs:
+        if "off" in outputs[output_name].options:
+            continue
+        if dpi:
+            outputs[output_name].options["dpi"] = dpi
+        if fb:
+            outputs[output_name].options["fb"] = fb
+        break
+
 
     return outputs, modes
 
@@ -645,6 +676,9 @@ def get_fb_dimensions(configuration):
             x = (a * o_width + b * o_height + c) / w
             y = (d * o_width + e * o_height + f) / w
             o_width, o_height = x, y
+        if "rotate" in output.options:
+            if output.options["rotate"] in ("left", "right"):
+                o_width, o_height = o_height, o_width
         if "pos" in output.options:
             o_left, o_top = map(int, output.options["pos"].split("x"))
             o_width += o_left
@@ -688,12 +722,25 @@ def apply_configuration(new_configuration, current_configuration, dry_run=False)
     #   explicitly, so avoid it unless necessary.
     #   (See https://github.com/phillipberndt/autorandr/issues/72)
 
-    fb_dimensions = get_fb_dimensions(new_configuration)
-    try:
-        base_argv += ["--fb", "%dx%d" % fb_dimensions]
-    except:
-        # Failed to obtain frame-buffer size. Doesn't matter, xrandr will choose for the user.
-        pass
+    # Extract global options from outputs, if configured
+    global_option_values = {}
+    for output in outputs:
+        for global_option in XrandrOutput.GLOBAL_OPTIONS:
+            if global_option in new_configuration[output].options:
+                global_option_values[global_option] = new_configuration[output].options[global_option]
+
+    # Prefix global options to args, with a default for --fb
+    if "fb" in global_option_values:
+        base_argv += ["--fb", global_option_values["fb"]]
+        del global_option_values["fb"]
+    else:
+        fb_dimensions = get_fb_dimensions(new_configuration)
+        try:
+            base_argv += ["--fb", "%dx%d" % fb_dimensions]
+        except:
+            # Failed to obtain frame-buffer size. Doesn't matter, xrandr will choose for the user.
+            pass
+    map(base_argv.extend, (("--%s" % key, value) for key, value in global_option_values.items()))
 
     auxiliary_changes_pre = []
     disable_outputs = []
